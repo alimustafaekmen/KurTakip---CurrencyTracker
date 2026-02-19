@@ -1,0 +1,25 @@
+# Docker'a kopyalanmasını istemediğimiz dosyalar
+# Files we don't want copied to Docker
+
+# Sanal ortam / Virtual environment
+venv/
+.venv/
+
+# Python cache dosyaları / Python cache files
+__pycache__/
+*.pyc
+
+# Git dosyaları / Git files
+.git/
+.gitignore
+
+# IDE dosyaları / IDE files
+.vscode/
+.idea/
+
+# Test dosyaları / Test files
+tests/
+
+# Diğer / Other
+README.md
+*.md

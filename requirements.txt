@@ -1,0 +1,11 @@
+# KurTakip - Bağımlılıklar / Dependencies
+# Yüklemek için / To install: pip install -r requirements.txt
+
+# Web framework - Backend sunucusu için / For the backend server
+Flask==3.1.0
+
+# HTTP istekleri - API çağrıları için / For making API calls
+requests==2.32.3
+
+# Test framework - Testleri çalıştırmak için / For running tests
+pytest==8.3.4

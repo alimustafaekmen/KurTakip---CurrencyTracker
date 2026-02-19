@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KurTakip - Döviz Kuru Takibi</title>
+    <meta name="description" content="Anlık döviz kuru takibi, dönüştürme ve geçmiş veri analizi">
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>💱</text></svg>">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd', 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        /* ===== LIGHT MODE (Default) ===== */
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-card: #ffffff;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --border: #e2e8f0;
+            --accent: #3b82f6;
+            --accent-light: #eff6ff;
+            --success: #10b981;
+            --success-light: #ecfdf5;
+            --warning: #f59e0b;
+            --warning-light: #fffbeb;
+            --danger: #ef4444;
+        }
+
+        /* ===== DARK MODE (Improved Bluish) ===== */
+        .dark {
+            --bg-primary: #0a0f1a;
+            --bg-secondary: #111827;
+            --bg-card: #1a2234;
+            --text-primary: #f8fafc;
+            --text-secondary: #a1b4cf;
+            --text-muted: #6b7d99;
+            --border: #2a3a52;
+            --accent: #5b9cf6;
+            --accent-light: rgba(91, 156, 246, 0.12);
+            --success: #4ade80;
+            --success-light: rgba(74, 222, 128, 0.12);
+            --warning: #fcd34d;
+            --warning-light: rgba(252, 211, 77, 0.12);
+            --danger: #fb7185;
+        }
+
+        body {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        /* Card Styles */
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            border-color: var(--accent);
+        }
+
+        .dark .card {
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        .dark .card:hover {
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Input Styles */
+        .input {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            border-radius: 12px;
+            padding: 14px 18px;
+            width: 100%;
+            transition: all 0.2s;
+        }
+
+        .input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-light);
+        }
+
+        .input::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* Button Styles */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent) 0%, #2563eb 100%);
+            color: white;
+            font-weight: 600;
+            padding: 14px 28px;
+            border-radius: 14px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.35);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
+        }
+
+        .btn-tertiary {
+            background: linear-gradient(135deg, var(--warning) 0%, #d97706 100%);
+            color: #0f172a;
+            box-shadow: 0 4px 14px rgba(245, 158, 11, 0.25);
+        }
+
+        .btn-tertiary:hover {
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.35);
+        }
+
+        /* Text Colors */
+        .text-primary {
+            color: var(--text-primary);
+        }
+
+        .text-secondary {
+            color: var(--text-secondary);
+        }
+
+        .text-muted {
+            color: var(--text-muted);
+        }
+
+        .text-accent {
+            color: var(--accent);
+        }
+
+        .text-success {
+            color: var(--success);
+        }
+
+        .text-danger {
+            color: var(--danger);
+        }
+
+        /* Background Colors */
+        .bg-accent-light {
+            background-color: var(--accent-light);
+        }
+
+        .bg-success-light {
+            background-color: var(--success-light);
+        }
+
+        .bg-warning-light {
+            background-color: var(--warning-light);
+        }
+
+        /* Border */
+        .border-default {
+            border-color: var(--border);
+        }
+
+        /* Header Gradient */
+        .header-gradient {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        }
+
+        .dark .header-gradient {
+            background: linear-gradient(135deg, #1e3a5f 0%, #1a2744 100%);
+        }
+
+        /* Section Icon */
+        .section-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            width: 48px;
+            height: 26px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 13px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .theme-toggle::after {
+            content: '☀️';
+            position: absolute;
+            left: 3px;
+            top: 2px;
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .dark .theme-toggle::after {
+            content: '🌙';
+            left: 23px;
+        }
+
+        /* Stat Value */
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        /* Star Button */
+        .star-btn {
+            color: var(--text-muted);
+            transition: all 0.2s;
+        }
+
+        .star-btn:hover {
+            transform: scale(1.15);
+        }
+
+        .star-btn.active {
+            color: #fbbf24;
+        }
+
+        /* Skeleton Loading */
+        .skeleton {
+            background: linear-gradient(90deg, var(--border) 25%, var(--bg-secondary) 50%, var(--border) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 12px;
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        /* Animation */
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Positive/Negative */
+        .positive {
+            color: var(--success);
+        }
+
+        .negative {
+            color: var(--danger);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+    </style>
+</head>
+
+<body class="min-h-screen">
+
+    <!-- Header -->
+    <header class="header-gradient text-white">
+        <div class="container mx-auto px-6 py-5">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-chart-line text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold">KurTakip</h1>
+                        <p class="text-xs text-white/70">Döviz Kuru Takibi</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-5">
+                    <div class="theme-toggle" id="themeToggle" title="Tema Değiştir"></div>
+                    <div class="text-right hidden sm:block">
+                        <p class="text-xs text-white/60">Güncel Tarih</p>
+                        <p id="currentDate" class="text-sm font-medium"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-6 py-8">
+
+        <!-- Favorilerim -->
+        <section id="favoritesSection" class="mb-8 hidden animate-fade-in">
+            <div class="flex items-center gap-3 mb-5">
+                <div class="section-icon bg-amber-500">
+                    <i class="fas fa-star text-sm"></i>
+                </div>
+                <h2 class="text-lg font-semibold">Favorilerim</h2>
+            </div>
+            <div id="favoritePairs" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+        </section>
+
+        <!-- Dönüştürücü -->
+        <section class="card p-6 mb-8">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="section-icon bg-blue-500">
+                    <i class="fas fa-exchange-alt text-sm"></i>
+                </div>
+                <h2 class="text-lg font-semibold">Para Birimi Dönüştürücü</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div>
+                    <label class="block text-sm font-medium text-secondary mb-2">Miktar</label>
+                    <input type="number" id="amount" value="1" min="0" step="0.01" class="input text-lg font-semibold">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-secondary mb-2">Kaynak</label>
+                    <select id="fromCurrency" class="input cursor-pointer">
+                        <option value="TRY">🇹🇷 TRY - Türk Lirası</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-secondary mb-2">Hedef</label>
+                    <select id="toCurrency" class="input cursor-pointer">
+                        <option value="USD">🇺🇸 USD - Amerikan Doları</option>
+                    </select>
+                </div>
+            </div>
+
+            <button id="convertBtn" class="btn-primary w-full">
+                <i class="fas fa-sync-alt mr-2"></i>Dönüştür
+            </button>
+
+            <div id="conversionResult" class="mt-6 p-6 bg-accent-light rounded-xl text-center hidden animate-fade-in">
+                <p class="text-sm text-secondary mb-1">Sonuç</p>
+                <p class="stat-value" id="resultAmount">0.00</p>
+                <p class="text-secondary mt-1" id="resultCurrency">USD</p>
+                <p class="text-sm text-muted mt-3" id="exchangeRate">Kur: 1 = 1</p>
+            </div>
+        </section>
+
+        <!-- Son Dönüşümlerim -->
+        <section id="historySection" class="card p-6 mb-8 hidden">
+            <div class="flex items-center justify-between mb-5">
+                <div class="flex items-center gap-3">
+                    <div class="section-icon bg-indigo-500">
+                        <i class="fas fa-history text-sm"></i>
+                    </div>
+                    <h2 class="text-lg font-semibold">Son Dönüşümlerim</h2>
+                </div>
+                <button id="clearHistoryBtn" class="text-sm text-danger hover:underline">
+                    <i class="fas fa-trash mr-1"></i>Temizle
+                </button>
+            </div>
+            <div id="conversionHistory" class="space-y-2"></div>
+        </section>
+
+        <!-- Tarih Sorguları -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Tarihe Göre Kur -->
+            <section class="card p-6">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="section-icon bg-teal-500">
+                        <i class="fas fa-calendar-alt text-sm"></i>
+                    </div>
+                    <h2 class="text-lg font-semibold">Tarihe Göre Kur</h2>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <label class="block text-xs font-medium text-secondary mb-1">Kaynak</label>
+                        <select id="dateFromCurrency" class="input text-sm py-3">
+                            <option value="USD">🇺🇸 USD</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-secondary mb-1">Hedef</label>
+                        <select id="dateToCurrency" class="input text-sm py-3">
+                            <option value="TRY">🇹🇷 TRY</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-xs font-medium text-secondary mb-1">Tarih</label>
+                    <input type="date" id="queryDate" class="input text-sm py-3">
+                </div>
+
+                <button id="queryDateBtn" class="btn-primary btn-secondary w-full py-3">
+                    <i class="fas fa-search mr-2"></i>Sorgula
+                </button>
+
+                <div id="dateQueryResult"
+                    class="mt-5 p-5 bg-success-light rounded-xl text-center hidden animate-fade-in">
+                    <p class="text-sm text-secondary" id="dateQueryLabel">Tarih</p>
+                    <p class="text-xl font-bold mt-1" id="dateQueryRate">1 USD = 34.25 TRY</p>
+                </div>
+            </section>
+
+            <!-- Tarih Karşılaştırma -->
+            <section class="card p-6">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="section-icon bg-orange-500">
+                        <i class="fas fa-balance-scale text-sm"></i>
+                    </div>
+                    <h2 class="text-lg font-semibold">Tarih Karşılaştır</h2>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <label class="block text-xs font-medium text-secondary mb-1">Kaynak</label>
+                        <select id="compareFromCurrency" class="input text-sm py-3">
+                            <option value="USD">🇺🇸 USD</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-secondary mb-1">Hedef</label>
+                        <select id="compareToCurrency" class="input text-sm py-3">
+                            <option value="TRY">🇹🇷 TRY</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div>
+                        <label class="block text-xs font-medium text-secondary mb-1">Başlangıç</label>
+                        <input type="date" id="compareStartDate" class="input text-sm py-3">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-secondary mb-1">Bitiş</label>
+                        <input type="date" id="compareEndDate" class="input text-sm py-3">
+                    </div>
+                </div>
+
+                <button id="compareDatesBtn" class="btn-primary btn-tertiary w-full py-3">
+                    <i class="fas fa-chart-bar mr-2"></i>Karşılaştır
+                </button>
+
+                <div id="compareResult" class="mt-5 p-5 bg-warning-light rounded-xl hidden animate-fade-in">
+                    <div class="grid grid-cols-3 gap-3 text-center">
+                        <div>
+                            <p class="text-xs text-muted" id="compareStartLabel">Başlangıç</p>
+                            <p class="text-lg font-bold mt-1" id="compareStartRate">32.50</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-muted">Değişim</p>
+                            <p class="text-xl font-bold mt-1" id="compareChangePercent">+5.38%</p>
+                            <p class="text-xs" id="compareChangeDirection">artış</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-muted" id="compareEndLabel">Bitiş</p>
+                            <p class="text-lg font-bold mt-1" id="compareEndRate">34.25</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Popüler Pariteler -->
+        <section class="mb-8">
+            <div class="flex items-center gap-3 mb-5">
+                <div class="section-icon bg-rose-500">
+                    <i class="fas fa-fire text-sm"></i>
+                </div>
+                <div>
+                    <h2 class="text-lg font-semibold">Popüler Pariteler</h2>
+                    <p class="text-xs text-muted">Favorilere eklemek için ⭐ tıklayın</p>
+                </div>
+            </div>
+
+            <div id="popularPairs" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="card p-5 h-28 skeleton"></div>
+                <div class="card p-5 h-28 skeleton"></div>
+                <div class="card p-5 h-28 skeleton"></div>
+                <div class="card p-5 h-28 skeleton"></div>
+            </div>
+        </section>
+
+        <!-- Grafik -->
+        <section id="chartSection" class="card p-6 mb-8 hidden">
+            <div class="flex items-center justify-between mb-5">
+                <div class="flex items-center gap-3">
+                    <div class="section-icon bg-violet-500">
+                        <i class="fas fa-chart-area text-sm"></i>
+                    </div>
+                    <h2 id="chartTitle" class="text-lg font-semibold">Geçmiş Veriler</h2>
+                </div>
+                <div class="flex items-center gap-2">
+                    <select id="addCompareChart" class="input text-sm py-2 px-3 w-auto">
+                        <option value="">+ Ekle</option>
+                    </select>
+                    <button id="removeCompareBtn"
+                        class="hidden text-sm px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex gap-2 mb-5">
+                <button
+                    class="chart-period-btn px-4 py-2 text-sm font-medium rounded-lg bg-accent-light text-accent border border-transparent"
+                    data-days="7">7 Gün</button>
+                <button
+                    class="chart-period-btn px-4 py-2 text-sm font-medium rounded-lg bg-transparent text-muted border border-default"
+                    data-days="30">30 Gün</button>
+                <button
+                    class="chart-period-btn px-4 py-2 text-sm font-medium rounded-lg bg-transparent text-muted border border-default"
+                    data-days="90">90 Gün</button>
+            </div>
+
+            <div class="rounded-xl p-4" style="background: var(--bg-secondary);">
+                <canvas id="historicalChart" height="100"></canvas>
+            </div>
+        </section>
+
+        <!-- Çoklu Dönüşüm -->
+        <section class="card p-6 mb-8">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="section-icon bg-emerald-500">
+                    <i class="fas fa-th-large text-sm"></i>
+                </div>
+                <h2 class="text-lg font-semibold">Çoklu Dönüşüm</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                    <label class="block text-sm font-medium text-secondary mb-2">Para Birimi</label>
+                    <select id="multiFromCurrency" class="input">
+                        <option value="TRY">🇹🇷 TRY - Türk Lirası</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-secondary mb-2">Miktar</label>
+                    <input type="number" id="multiAmount" value="100" min="0" step="0.01"
+                        class="input text-lg font-semibold">
+                </div>
+            </div>
+
+            <button id="multiConvertBtn" class="btn-primary btn-secondary w-full">
+                <i class="fas fa-calculator mr-2"></i>Tüm Para Birimlerine Dönüştür
+            </button>
+
+            <div id="multiConversionResults" class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 hidden">
+            </div>
+        </section>
+
+        <!-- Para Birimi Arama -->
+        <section class="card p-6">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="section-icon bg-blue-500">
+                    <i class="fas fa-search text-sm"></i>
+                </div>
+                <h2 class="text-lg font-semibold">Para Birimi Ara</h2>
+            </div>
+
+            <input type="text" id="currencySearch" placeholder="Para birimi ara (örn: Euro, TRY)..."
+                class="input text-lg">
+
+            <div id="searchResults" class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer style="background: var(--bg-card); border-top: 1px solid var(--border);" class="mt-10">
+        <div class="container mx-auto px-6 py-6">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-chart-line text-accent"></i>
+                    <span class="font-semibold">KurTakip</span>
+                    <span class="text-muted">© 2025</span>
+                </div>
+                <p class="text-xs text-muted text-center">
+                    Veriler üçüncü parti API'lerden sağlanmaktadır. Yatırım tavsiyesi değildir.
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/js/app.js"></script>
+</body>
+
+</html>
