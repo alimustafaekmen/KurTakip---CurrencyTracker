@@ -113,5 +113,5 @@ python -m pytest tests/ -v
 ## 👤 Geliştirici / Developer
 
 **Ali Mustafa Ekmen**  
-*Bu proje eğitim ve portfolyo amaçlı geliştirilmiştir.*  
-*Developed for educational and portfolio purposes.*
+*Bu proje eğitim amaçlı geliştirilmiştir.*  
+*Developed for educational purposes.*

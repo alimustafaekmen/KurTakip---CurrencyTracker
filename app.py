@@ -828,6 +828,16 @@ def serve_js():
     return send_from_directory(js_folder, "app.js", mimetype="application/javascript")
 
 
+@app.route("/css/style.css")
+def serve_css():
+    """
+    CSS dosyasını gönderir.
+    Serves the CSS file.
+    """
+    css_folder = os.path.join(BASE_DIR, "static", "css")
+    return send_from_directory(css_folder, "style.css", mimetype="text/css")
+
+
 # ============================================================
 # Uygulamayı Başlat / Start the Application
 # Bu kısım sadece "python app.py" komutuyla çalıştırıldığında çalışır
